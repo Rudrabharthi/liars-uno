@@ -1,7 +1,12 @@
 services:
   - type: web
-    name: placeholder
+    name: liars-uno
     runtime: node
+    rootDir: liars-uno
     plan: free
-    buildCommand: echo build
-    startCommand: echo start
+    buildCommand: npm --prefix server install && npm --prefix client install && npm --prefix client run build
+    startCommand: node server/src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
