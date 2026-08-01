@@ -1,4 +1,23 @@
 {
-  "name": "package.json",
-  "private": true
+  "name": "liars-uno-server",
+  "version": "1.0.0",
+  "description": "Authoritative Socket.io game server for Liar's UNO",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/gameplay.test.js test/integration.test.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.7.5"
+  }
 }
