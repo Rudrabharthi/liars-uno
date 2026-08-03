@@ -1,2 +1,2 @@
-// Deck.js — initial scaffold
+// Deck.js — extended scaffold (part 1)
 // TODO: implement full behavior
