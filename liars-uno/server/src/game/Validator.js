@@ -1,2 +1,2 @@
-// Validator.js — extended scaffold (part 1)
+// Validator.js — extended scaffold (part 2)
 // TODO: implement full behavior
