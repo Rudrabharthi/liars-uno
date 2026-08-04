@@ -1,2 +1,2 @@
-// GameRoom.js — extended scaffold (part 1)
+// GameRoom.js — extended scaffold (part 2)
 // TODO: implement full behavior
