@@ -1,2 +1,2 @@
-// soundEffects.js — initial scaffold
+// soundEffects.js — extended scaffold (part 1)
 // TODO: implement full behavior
