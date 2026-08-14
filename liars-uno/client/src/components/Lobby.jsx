@@ -1,2 +1,2 @@
-// Lobby.jsx — initial scaffold
+// Lobby.jsx — extended scaffold (part 1)
 // TODO: implement full behavior
