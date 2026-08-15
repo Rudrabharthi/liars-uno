@@ -1,4 +1,11 @@
 {
-  "name": "package.json",
-  "private": true
+  "name": "liars-uno-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "smoke": "node smoke.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.1"
+  }
 }
