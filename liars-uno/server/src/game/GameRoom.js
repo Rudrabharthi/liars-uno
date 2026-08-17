@@ -402,7 +402,8 @@ export class GameRoom {
     } else if (value === 'WILD_DRAW_4') {
       this.drawStackCount += 4;
     } else {
-      // full-freedom: a non-stack declared claim nullifies any pending stack
+      // claims must be legal plays (Validator.isClaimValid), so a non-stack
+      // claim only ever occurs with no pending stack — nothing to nullify
       this.drawStackCount = 0;
     }
   }
@@ -423,8 +424,8 @@ export class GameRoom {
     if (!card) return { ok: false, error: 'Card not in hand' };
 
     if (isFaceDown) {
-      if (!isClaimValid(declaredClaim)) {
-        return { ok: false, error: 'Invalid declaration' };
+      if (!isClaimValid(declaredClaim, this.activeColor, this.activeValue, this.drawStackCount, this.openingMove)) {
+        return { ok: false, error: 'Invalid declaration — claim must be a legal play' };
       }
       return this._playFaceDown(p, card, declaredClaim);
     }
@@ -556,7 +557,7 @@ export class GameRoom {
     if (card.value === 'WILD' && !card.isLiarModifier) return { ok: false, error: 'Wild cannot be a follow-up card' };
 
     if (isFaceDown) {
-      if (!isClaimValid(claim)) {
+      if (!isClaimValid(claim, wildColor, 'WILD', this.drawStackCount)) {
         return { ok: false, error: 'Invalid follow-up declaration' };
       }
       return this._playFaceDown(p, card, claim);

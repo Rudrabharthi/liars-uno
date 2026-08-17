@@ -46,16 +46,22 @@ export function canStackCard(activeTopValue, activeDeclaredColor, incomingCard) 
 }
 
 /**
- * §5.2 — validates a face-down declared claim (full-freedom variant).
- * Any color + claimable value is legal, regardless of the active table state.
- * A non-stack claim made while a draw stack is pending nullifies that stack
- * (handled in GameRoom._applyDeclaredEffects).
+ * §5.2 — validates a face-down declared claim.
+ * A bluff claim must be a LEGAL play (same matching rules as a face-up card):
+ *   - WILD_DRAW_4 claims are always legal.
+ *   - During a draw stack, only a stackable +2/+4 claim is legal.
+ *   - On the opening move, the claim must match the starting color.
+ *   - Otherwise the claim must match the active color OR value.
  */
-export function isClaimValid(declaredClaim) {
+export function isClaimValid(declaredClaim, activeColor, activeValue, drawStackCount = 0, openingOnly = false) {
   if (!declaredClaim || typeof declaredClaim !== 'object') return false;
   const { color, value } = declaredClaim;
   if (!PLAYABLE_COLORS.includes(color)) return false;
-  return CLAIMABLE_VALUES.includes(value);
+  if (!CLAIMABLE_VALUES.includes(value)) return false;
+  if (value === 'WILD_DRAW_4') return true; // +4 claim always legal
+  if (openingOnly) return color === activeColor;
+  if (drawStackCount > 0) return canStackCard(activeValue, activeColor, { color, value });
+  return color === activeColor || value === activeValue;
 }
 
 /**

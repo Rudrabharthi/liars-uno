@@ -28,6 +28,7 @@ export default function DeclareCardModal({
   activeColor,
   activeValue,
   drawStackCount,
+  openingMove = false,
   onClose,
   onSubmit,
   onColor,
@@ -54,7 +55,7 @@ export default function DeclareCardModal({
   const isValueLegal = (v) => {
     if (mode !== 'bluff') return false;
     if (!allowed.includes(v)) return false;
-    return isClaimValid({ color, value: v });
+    return isClaimValid({ color, value: v }, activeColor, activeValue, drawStackCount, openingMove);
   };
 
   const handleColorPick = (c) => {

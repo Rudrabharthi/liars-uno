@@ -54,11 +54,14 @@ export function isCardPlayable(card, activeColor, activeValue, drawStackCount, i
   return card.color === activeColor || card.value === activeValue;
 }
 
-export function isClaimValid(declaredClaim) {
+export function isClaimValid(declaredClaim, activeColor, activeValue, drawStackCount = 0, openingOnly = false) {
   if (!declaredClaim || typeof declaredClaim !== 'object') return false;
   const { color, value } = declaredClaim;
   if (!COLORS.includes(color) || !value) return false;
-  return true;
+  if (value === 'WILD_DRAW_4') return true; // +4 claim always legal
+  if (openingOnly) return color === activeColor;
+  if (drawStackCount > 0) return canStackCard(activeValue, activeColor, { color, value });
+  return color === activeColor || value === activeValue;
 }
 
 /** Sort: color groups then number/action ordering. */
@@ -79,7 +82,7 @@ export function cardDisplay(card) {
   return { color: card.color, value: card.value, isLiarModifier: !!card.isLiarModifier };
 }
 
-/** Allowed claim values for a liar declaration — full freedom: any value, always. */
+/** Allowed claim values for a liar declaration (UI hint only — server re-validates). */
 export function allowedClaimValues() {
   return [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',

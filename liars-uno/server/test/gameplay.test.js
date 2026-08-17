@@ -85,15 +85,25 @@ describe('Validator rules', () => {
     assert.ok(!canStackCard('SKIP', 'red', card('blue', 'DRAW_2')));
   });
 
-  test('isClaimValid — full-freedom: any color+value claim is legal', () => {
-    // any claim is legal regardless of the active table state
+  test('isClaimValid — claims must be legal plays (color/value match, stack, or +4)', () => {
+    // WILD_DRAW_4 claim is always legal
     assert.ok(isClaimValid({ color: 'red', value: 'WILD_DRAW_4' }, 'blue', '5', 0));
+    // matches active value → legal
     assert.ok(isClaimValid({ color: 'red', value: '5' }, 'blue', '5', 0));
-    assert.ok(isClaimValid({ color: 'red', value: 'DRAW_2' }, 'blue', '5', 0));
+    // matches active color → legal
+    assert.ok(isClaimValid({ color: 'blue', value: '9' }, 'blue', '5', 0));
+    // wrong color + wrong value → illegal (the reported bug)
+    assert.ok(!isClaimValid({ color: 'red', value: '6' }, 'blue', '5', 0));
+    assert.ok(!isClaimValid({ color: 'red', value: 'DRAW_2' }, 'blue', '5', 0));
+    // during a stack, only stackable +2/+4 claims are legal
     assert.ok(isClaimValid({ color: 'red', value: 'DRAW_2' }, 'red', 'WILD_DRAW_4', 4));
-    assert.ok(isClaimValid({ color: 'blue', value: 'DRAW_2' }, 'red', 'WILD_DRAW_4', 4));
-    assert.ok(isClaimValid({ color: 'red', value: '7' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4));
-    assert.ok(isClaimValid({ color: 'yellow', value: 'SKIP' }, 'blue', '0', 0));
+    assert.ok(!isClaimValid({ color: 'blue', value: 'DRAW_2' }, 'red', 'WILD_DRAW_4', 4));
+    assert.ok(!isClaimValid({ color: 'red', value: '7' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4));
+    assert.ok(isClaimValid({ color: 'green', value: 'WILD_DRAW_4' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4));
+    assert.ok(!isClaimValid({ color: 'yellow', value: 'SKIP' }, 'blue', '0', 0));
+    // opening move: only the starting color (or +4) is a legal claim
+    assert.ok(isClaimValid({ color: 'red', value: '6' }, 'red', '7', 0, true));
+    assert.ok(!isClaimValid({ color: 'blue', value: '6' }, 'red', '7', 0, true));
     // malformed / out-of-domain claims are still rejected
     assert.ok(!isClaimValid({ color: 'wild', value: '5' }, 'blue', '5', 0));
     assert.ok(!isClaimValid({ color: 'blue', value: '' }, 'blue', '5', 0));
@@ -323,18 +333,38 @@ describe('GameRoom — scripted full-game simulations', () => {
     assert.equal(room.drawStackCount, stackBefore);
   });
 
-  test('full-freedom: a non-stack declared claim nullifies a pending draw stack', () => {
+  test('a non-stack claim during a pending draw stack is rejected (no nullification)', () => {
     const room = new GameRoom('T', 'p0', 'P0', 5);
+    room._addPlayer('p1', 'P1');
     room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    room.activeColor = 'red';
+    room.activeValue = 'WILD_DRAW_4';
     room.drawStackCount = 4;
-    room._applyDeclaredEffects('yellow', '7');
-    assert.equal(room.drawStackCount, 0);
-    room.drawStackCount = 4;
-    room._applyDeclaredEffects('yellow', 'DRAW_2');
-    assert.equal(room.drawStackCount, 6);
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.pendingEffects = { skip: false };
+    room.players.get('p0').hand = [{ id: 'liar', color: 'yellow', value: '7', isLiarModifier: true }];
+    // declaring a plain number while a +4 stack is pending is not a legal claim
+    const res = room.handlePlayCard('p0', {
+      cardId: 'liar',
+      isFaceDown: true,
+      declaredClaim: { color: 'yellow', value: '7' },
+    });
+    assert.equal(res.ok, false);
+    assert.equal(room.drawStackCount, 4, 'stack is untouched by a rejected claim');
+    // a stackable +4 claim is still legal and grows the stack
+    room.players.get('p0').hand = [{ id: 'liar2', color: 'red', value: 'WILD_DRAW_4', isLiarModifier: true }];
+    const res2 = room.handlePlayCard('p0', {
+      cardId: 'liar2',
+      isFaceDown: true,
+      declaredClaim: { color: 'green', value: 'WILD_DRAW_4' },
+    });
+    assert.equal(res2.ok, true);
+    assert.equal(room.drawStackCount, 8);
     room.drawStackCount = 2;
-    room._applyDeclaredEffects('yellow', 'WILD_DRAW_4');
-    assert.equal(room.drawStackCount, 6);
+    room._applyDeclaredEffects('yellow', 'DRAW_2');
+    assert.equal(room.drawStackCount, 4);
   });
 
   test('caught liar pays stack + 1', () => {
@@ -434,6 +464,9 @@ describe('GameRoom — scripted full-game simulations', () => {
     room.turnState = 'PLAYER_TURN_START';
     room.pendingEffects = { skip: false };
     room.direction = 1;
+    room.activeColor = 'red';
+    room.activeValue = '5';
+    room.drawStackCount = 0;
     room.players.get('p0').hand = [
       { id: 'skip', color: 'red', value: 'SKIP', isLiarModifier: true },
     ];
@@ -457,6 +490,9 @@ describe('GameRoom — scripted full-game simulations', () => {
     room.turnState = 'PLAYER_TURN_START';
     room.pendingEffects = { skip: false };
     room.direction = 1;
+    room.activeColor = 'blue';
+    room.activeValue = '5';
+    room.drawStackCount = 0;
     room.players.get('p0').hand = [
       { id: 'rev', color: 'blue', value: 'REVERSE', isLiarModifier: true },
     ];
@@ -488,5 +524,72 @@ describe('GameRoom — scripted full-game simulations', () => {
     res = room.handlePassTurn('p0');
     assert.equal(res.ok, true);
     assert.notEqual(room.activePlayerId, 'p0');
+  });
+
+  test('wrong-color bluff claim is rejected; caught truthful-color bluff penalizes bluffer', () => {
+    const room = makeRoom(2, 5);
+    room.activeColor = 'blue';
+    room.activeValue = '7';
+    room.drawStackCount = 0;
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.pendingEffects = { skip: false };
+    // p2 physically holds a red-6 liar card
+    room.players.get('p0').hand = [{ id: 'liar', color: 'red', value: '6', isLiarModifier: true }];
+    // Bug repro: declaring "6-red" on active blue-7 must be rejected
+    const bad = room.handlePlayCard('p0', {
+      cardId: 'liar',
+      isFaceDown: true,
+      declaredClaim: { color: 'red', value: '6' },
+    });
+    assert.equal(bad.ok, false, 'wrong-color claim must be rejected');
+    assert.equal(bad.error, 'Invalid declaration — claim must be a legal play');
+    assert.equal(room.players.get('p0').hand.length, 1, 'rejected claim must not consume the card');
+    // legal bluff: declare "6-blue" (color matches), physical is red-6 → caught lie
+    const ok = room.handlePlayCard('p0', {
+      cardId: 'liar',
+      isFaceDown: true,
+      declaredClaim: { color: 'blue', value: '6' },
+    });
+    assert.equal(ok.ok, true);
+    assert.equal(room.turnState, 'AWAITING_CHALLENGE');
+    assert.equal(room.activeColor, 'blue');
+    const challengerId = room.challengePlayerId;
+    const challengerBefore = room.players.get(challengerId).hand.length;
+    const call = room.handleChallengeAction(challengerId, 'call_liar');
+    assert.equal(call.ok, true);
+    const bluffer = room.players.get('p0');
+    assert.equal(bluffer.hand.length, 1, 'caught bluffer draws the penalty (stack+1 = 1)');
+    assert.equal(room.players.get(challengerId).hand.length, challengerBefore, 'challenger must not pay');
+    assert.equal(room.drawStackCount, 0);
+  });
+
+  test('truthful-color bluff: matching physical card shifts penalty to challenger', () => {
+    const room = makeRoom(2, 5);
+    room.activeColor = 'blue';
+    room.activeValue = '7';
+    room.drawStackCount = 0;
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.pendingEffects = { skip: false };
+    // p2 physically holds a blue-6 liar card and declares "6-blue" truthfully
+    room.players.get('p0').hand = [{ id: 'liar', color: 'blue', value: '6', isLiarModifier: true }];
+    const ok = room.handlePlayCard('p0', {
+      cardId: 'liar',
+      isFaceDown: true,
+      declaredClaim: { color: 'blue', value: '6' },
+    });
+    assert.equal(ok.ok, true);
+    assert.equal(room.turnState, 'AWAITING_CHALLENGE');
+    const challengerId = room.challengePlayerId;
+    const callerBefore = room.players.get(challengerId).hand.length;
+    const call = room.handleChallengeAction(challengerId, 'call_liar');
+    assert.equal(call.ok, true);
+    assert.ok(
+      room.players.get(challengerId).hand.length > callerBefore,
+      'challenging a truthful claim must penalize the challenger'
+    );
+    assert.equal(call.gameOver, true, 'truthful final card wins the game');
+    assert.equal(room.winners[0].id, 'p0', 'the truthful bluffer is the winner');
   });
 });

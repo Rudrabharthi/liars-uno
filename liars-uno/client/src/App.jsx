@@ -307,6 +307,7 @@ export default function App() {
         activeColor={game.activeColor}
         activeValue={game.activeValue}
         drawStackCount={game.drawStackCount}
+        openingMove={game.openingMove}
         onClose={() => setBluffCard(null)}
         onSubmit={handleBluffSubmit}
       />
