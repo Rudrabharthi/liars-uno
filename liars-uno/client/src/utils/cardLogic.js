@@ -59,8 +59,9 @@ export function isClaimValid(declaredClaim, activeColor, activeValue, drawStackC
   const { color, value } = declaredClaim;
   if (!COLORS.includes(color) || !value) return false;
   if (value === 'WILD_DRAW_4') return true; // +4 claim always legal
-  if (openingOnly) return color === activeColor;
   if (drawStackCount > 0) return canStackCard(activeValue, activeColor, { color, value });
+  if (value === 'SKIP' || value === 'REVERSE' || value === 'DRAW_2') return true; // power cards legal in all 4 colors
+  if (openingOnly) return color === activeColor;
   return color === activeColor || value === activeValue;
 }
 

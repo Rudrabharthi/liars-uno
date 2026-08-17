@@ -94,13 +94,18 @@ describe('Validator rules', () => {
     assert.ok(isClaimValid({ color: 'blue', value: '9' }, 'blue', '5', 0));
     // wrong color + wrong value → illegal (the reported bug)
     assert.ok(!isClaimValid({ color: 'red', value: '6' }, 'blue', '5', 0));
-    assert.ok(!isClaimValid({ color: 'red', value: 'DRAW_2' }, 'blue', '5', 0));
+    // power cards (SKIP/REVERSE/DRAW_2) are claimable in all 4 colors
+    for (const c of ['red', 'blue', 'green', 'yellow']) {
+      assert.ok(isClaimValid({ color: c, value: 'SKIP' }, 'blue', '5', 0));
+      assert.ok(isClaimValid({ color: c, value: 'REVERSE' }, 'blue', '5', 0));
+      assert.ok(isClaimValid({ color: c, value: 'DRAW_2' }, 'blue', '5', 0));
+    }
     // during a stack, only stackable +2/+4 claims are legal
     assert.ok(isClaimValid({ color: 'red', value: 'DRAW_2' }, 'red', 'WILD_DRAW_4', 4));
     assert.ok(!isClaimValid({ color: 'blue', value: 'DRAW_2' }, 'red', 'WILD_DRAW_4', 4));
     assert.ok(!isClaimValid({ color: 'red', value: '7' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4));
     assert.ok(isClaimValid({ color: 'green', value: 'WILD_DRAW_4' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4));
-    assert.ok(!isClaimValid({ color: 'yellow', value: 'SKIP' }, 'blue', '0', 0));
+    assert.ok(!isClaimValid({ color: 'yellow', value: 'SKIP' }, 'WILD_DRAW_4', 'WILD_DRAW_4', 4), 'SKIP cannot nullify a pending stack');
     // opening move: only the starting color (or +4) is a legal claim
     assert.ok(isClaimValid({ color: 'red', value: '6' }, 'red', '7', 0, true));
     assert.ok(!isClaimValid({ color: 'blue', value: '6' }, 'red', '7', 0, true));

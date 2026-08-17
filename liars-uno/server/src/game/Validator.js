@@ -11,6 +11,9 @@ export const CLAIMABLE_VALUES = [
   'SKIP', 'REVERSE', 'DRAW_2', 'WILD_DRAW_4',
 ];
 
+/** Power cards — claimable in any of the 4 colors (no color-match requirement). */
+export const POWER_VALUES = ['SKIP', 'REVERSE', 'DRAW_2'];
+
 export function isWildValue(value) {
   return value === 'WILD' || value === 'WILD_DRAW_4';
 }
@@ -47,8 +50,9 @@ export function canStackCard(activeTopValue, activeDeclaredColor, incomingCard) 
 
 /**
  * §5.2 — validates a face-down declared claim.
- * A bluff claim must be a LEGAL play (same matching rules as a face-up card):
+ * A bluff claim must be a LEGAL play:
  *   - WILD_DRAW_4 claims are always legal.
+ *   - Power cards (SKIP / REVERSE / DRAW_2) are claimable in any of the 4 colors.
  *   - During a draw stack, only a stackable +2/+4 claim is legal.
  *   - On the opening move, the claim must match the starting color.
  *   - Otherwise the claim must match the active color OR value.
@@ -59,8 +63,9 @@ export function isClaimValid(declaredClaim, activeColor, activeValue, drawStackC
   if (!PLAYABLE_COLORS.includes(color)) return false;
   if (!CLAIMABLE_VALUES.includes(value)) return false;
   if (value === 'WILD_DRAW_4') return true; // +4 claim always legal
-  if (openingOnly) return color === activeColor;
   if (drawStackCount > 0) return canStackCard(activeValue, activeColor, { color, value });
+  if (POWER_VALUES.includes(value)) return true; // power cards legal in all 4 colors
+  if (openingOnly) return color === activeColor;
   return color === activeColor || value === activeValue;
 }
 
