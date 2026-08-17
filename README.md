@@ -16,4 +16,4 @@ cd liars-uno/server && npm install && npm start
 cd liars-uno/client && npm install && npm run dev
 ```
 
-Open http://localhost:5173
+
