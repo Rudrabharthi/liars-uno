@@ -319,11 +319,29 @@ body {
   background: linear-gradient(145deg, #ffff66 0%, #ffff00 100%);
 }
 .card--wild {
-  background: linear-gradient(145deg, #27334a 0%, #111a2b 100%);
+  background:
+    linear-gradient(90deg, transparent calc(50% - 2px), rgba(255, 255, 255, 0.92) calc(50% - 2px), rgba(255, 255, 255, 0.92) calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(0deg, transparent calc(50% - 2px), rgba(255, 255, 255, 0.92) calc(50% - 2px), rgba(255, 255, 255, 0.92) calc(50% + 2px), transparent calc(50% + 2px)),
+    conic-gradient(
+      from 0deg,
+      #ff3b3b 0deg 90deg,
+      #3b6bff 90deg 180deg,
+      #37d24f 180deg 270deg,
+      #ffd42e 270deg 360deg
+    );
 }
 .card--wild .card-corner,
 .card--wild .card-center {
   color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.55);
+}
+.card--wild::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  background: radial-gradient(circle at 50% 50%, rgba(17, 26, 43, 0.28) 0%, transparent 62%);
+  pointer-events: none;
 }
 .card--yellow .card-corner,
 .card--yellow .card-center {

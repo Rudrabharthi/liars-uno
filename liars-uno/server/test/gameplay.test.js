@@ -221,7 +221,7 @@ function autoMove(room, rng) {
   }
 
   // normal play (already drew this turn? then pass if nothing playable)
-  const playable = p.hand.filter((c) => isCardPlayable(c, room.activeColor, room.activeValue, 0));
+  const playable = p.hand.filter((c) => isCardPlayable(c, room.activeColor, room.activeValue, 0, false, room.openingMove));
   if (room.hasDrawnThisTurn && playable.length === 0) {
     const res = room.handlePassTurn(pid);
     if (!res.ok) throw new Error(`pass failed: ${JSON.stringify(res)}`);
@@ -371,5 +371,122 @@ describe('GameRoom — scripted full-game simulations', () => {
       }
       autoMove(room, () => 0.3);
     }
+  });
+
+  test('opening move must match the starting color (no value-match on first play)', () => {
+    const room = new GameRoom('T', 'p0', 'P0', 7);
+    room._addPlayer('p1', 'P1');
+    room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    // force a known starting state: active red 5, first play pending
+    room.activeColor = 'red';
+    room.activeValue = '5';
+    room.openingMove = true;
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+
+    const p0 = room.players.get('p0');
+    p0.hand = [
+      { id: 'blue5', color: 'blue', value: '5', isLiarModifier: false },
+      { id: 'red7', color: 'red', value: '7', isLiarModifier: false },
+      { id: 'wild', color: 'wild', value: 'WILD', isLiarModifier: false },
+    ];
+
+    // value-match a different color → rejected while opening
+    let res = room.handlePlayCard('p0', { cardId: 'blue5', isFaceDown: false });
+    assert.equal(res.ok, false);
+    // matching color → allowed, clears opening restriction
+    res = room.handlePlayCard('p0', { cardId: 'red7', isFaceDown: false });
+    assert.equal(res.ok, true);
+    assert.equal(room.openingMove, false, 'opening restriction lifts after the first play');
+  });
+
+  test('opening move: wild is always playable, face-down bluff is playable', () => {
+    const room = new GameRoom('T', 'p0', 'P0', 7);
+    room._addPlayer('p1', 'P1');
+    room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    room.activeColor = 'green';
+    room.activeValue = '3';
+    room.openingMove = true;
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    const p0 = room.players.get('p0');
+    p0.hand = [
+      { id: 'wild', color: 'wild', value: 'WILD', isLiarModifier: false },
+      { id: 'liar', color: 'blue', value: '7', isLiarModifier: true },
+    ];
+    let res = room.handlePlayCard('p0', {
+      cardId: 'wild',
+      isFaceDown: false,
+      declaredClaim: { color: 'yellow', value: 'WILD' },
+    });
+    assert.equal(res.ok, true, 'wild should be playable on the opening move');
+    assert.equal(room.openingMove, false);
+  });
+
+  test('2-player: accepted SKIP bluff bounces the turn back to the bluffer', () => {
+    const room = new GameRoom('T', 'p0', 'P0', 7);
+    room._addPlayer('p1', 'P1');
+    room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.pendingEffects = { skip: false };
+    room.direction = 1;
+    room.players.get('p0').hand = [
+      { id: 'skip', color: 'red', value: 'SKIP', isLiarModifier: true },
+    ];
+    const res = room.handlePlayCard('p0', {
+      cardId: 'skip',
+      isFaceDown: true,
+      declaredClaim: { color: 'red', value: 'SKIP' },
+    });
+    assert.equal(res.ok, true);
+    const call = room.handleChallengeAction(room.challengePlayerId, 'accept_bluff');
+    assert.equal(call.ok, true);
+    assert.equal(room.activePlayerId, 'p0', '2-player SKIP must keep the turn with the bluffer');
+  });
+
+  test('2-player: accepted REVERSE bluff bounces the turn back to the bluffer', () => {
+    const room = new GameRoom('T', 'p0', 'P0', 7);
+    room._addPlayer('p1', 'P1');
+    room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.pendingEffects = { skip: false };
+    room.direction = 1;
+    room.players.get('p0').hand = [
+      { id: 'rev', color: 'blue', value: 'REVERSE', isLiarModifier: true },
+    ];
+    const res = room.handlePlayCard('p0', {
+      cardId: 'rev',
+      isFaceDown: true,
+      declaredClaim: { color: 'blue', value: 'REVERSE' },
+    });
+    assert.equal(res.ok, true);
+    const call = room.handleChallengeAction(room.challengePlayerId, 'accept_bluff');
+    assert.equal(call.ok, true);
+    assert.equal(room.activePlayerId, 'p0', '2-player REVERSE must keep the turn with the bluffer');
+  });
+
+  test('pass requires drawing a card first', () => {
+    const room = new GameRoom('T', 'p0', 'P0', 7);
+    room._addPlayer('p1', 'P1');
+    room.setEmitter({ roomBroadcast: () => {}, socketEmit: () => {} });
+    room.startGame();
+    room.activePlayerId = 'p0';
+    room.turnState = 'PLAYER_TURN_START';
+    room.hasDrawnThisTurn = false;
+    // pass before drawing → rejected
+    let res = room.handlePassTurn('p0');
+    assert.equal(res.ok, false);
+    // draw then pass → allowed
+    res = room.handleDrawCard('p0');
+    assert.equal(res.ok, true);
+    res = room.handlePassTurn('p0');
+    assert.equal(res.ok, true);
+    assert.notEqual(room.activePlayerId, 'p0');
   });
 });

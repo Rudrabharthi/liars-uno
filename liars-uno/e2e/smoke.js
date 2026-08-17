@@ -180,7 +180,7 @@ async function driveGame(pages, log) {
     }
 
     // 3e) pass
-    const passBtn = active.locator('button.btn-ghost', { hasText: 'Pass' });
+    const passBtn = active.locator('button.btn-ghost, button.btn-primary', { hasText: 'Pass' });
     if (await isVisible(passBtn)) {
       await clickIt(passBtn);
       log(`move ${move}: pass`);
@@ -222,7 +222,13 @@ try {
   // --- lobby: create + join ---
   await a.goto(CLIENT_URL);
   await a.locator('.input-dark').first().fill('Alice');
-  await a.locator('button.btn-ghost', { hasText: '5 cards' }).click();
+  // set starting hand size to 5 via the range slider
+  await a.locator('.range-slider').evaluate((el) => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(el, '5');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   await a.locator('button.btn-primary', { hasText: 'Create room' }).click();
   await a.locator('h2.panel-title').waitFor({ timeout: 10000 });
   const code = (await a.locator('h2.panel-title').textContent()).match(/Room\s+(\w{6})/)[1];

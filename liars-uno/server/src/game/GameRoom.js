@@ -59,6 +59,8 @@ export class GameRoom {
     this.wildDrawnOption = null;
     this.hasDrawnThisTurn = false;
 
+    this.openingMove = true;
+
     this.unoCatchWindow = null;
     this.winners = [];
     this.timers = new Map();
@@ -154,7 +156,7 @@ export class GameRoom {
 
   /** Challenge eligibility computed at bluff time — the immediate next player. */
   _computeChallengeNext(blufferId) {
-    let next = this._getNextPlayerId(blufferId);
+    let next = this._getNextPlayerId(blufferId, { skip: false });
     if (next === null || next === blufferId) {
       const alt = this._seatOrder().find((id) => this._isActive(id) && id !== blufferId);
       next = alt ?? blufferId;
@@ -214,6 +216,7 @@ export class GameRoom {
     this.unoCatchWindow = null;
     this.pendingEffects = { skip: false };
     this.winners = [];
+    this.openingMove = true;
 
     for (const p of active) {
       p.hand = [];
@@ -430,7 +433,7 @@ export class GameRoom {
     if (card.value === 'WILD' && this.turnState === TURN_STATES.AWAITING_WILD_FOLLOWUP) {
       return { ok: false, error: 'Wild cannot be a follow-up card' };
     }
-    if (!isCardPlayable(card, this.activeColor, this.activeValue, this.drawStackCount)) {
+    if (!isCardPlayable(card, this.activeColor, this.activeValue, this.drawStackCount, false, this.openingMove)) {
       return { ok: false, error: 'Card not playable' };
     }
     return this._playFaceUp(p, card, declaredClaim);
@@ -439,6 +442,7 @@ export class GameRoom {
   _playFaceUp(p, card, declaredClaim) {
     p.hand = p.hand.filter((c) => c.id !== card.id);
     this.discardPile.push(card);
+    this.openingMove = false;
 
     if (card.value === 'WILD') {
       const color = declaredClaim?.color;
@@ -482,6 +486,7 @@ export class GameRoom {
     card.declaredColor = color;
     card.declaredValue = value;
     this.discardPile.push(card);
+    this.openingMove = false;
 
     this._applyDeclaredEffects(color, value);
 
@@ -536,6 +541,7 @@ export class GameRoom {
     this.wildDrawnOption = null;
     p.hand = p.hand.filter((c) => c.id !== wild.id);
     this.discardPile.push(wild);
+    this.openingMove = false;
     this.activeColor = declaredColor;
     this.activeValue = 'WILD';
     this.pendingEffects = { skip: false };
@@ -704,7 +710,6 @@ export class GameRoom {
 
     this.challengePlayerId = null;
     this.challengeExpiresAt = null;
-    this.pendingEffects = { skip: false };
     this.turnState = TURN_STATES.PLAYER_TURN_START;
 
     const resolvedPayload = {
@@ -934,6 +939,7 @@ export class GameRoom {
       forcedWildDraw: this.forcedWildDraw,
       wildDrawnOption: this.wildDrawnOption,
       hasDrawnThisTurn: this.hasDrawnThisTurn,
+      openingMove: this.openingMove,
       unoCatchWindow: this.unoCatchWindow
         ? {
             targetPlayerId: this.unoCatchWindow.targetPlayerId,

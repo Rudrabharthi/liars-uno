@@ -46,8 +46,9 @@ export function canStackCard(activeTopValue, activeDeclaredColor, incomingCard) 
   return false;
 }
 
-export function isCardPlayable(card, activeColor, activeValue, drawStackCount, isFaceDown = false) {
+export function isCardPlayable(card, activeColor, activeValue, drawStackCount, isFaceDown = false, openingOnly = false) {
   if (isFaceDown) return true;
+  if (openingOnly) return card.color === 'wild' || card.color === activeColor;
   if (drawStackCount > 0) return canStackCard(activeValue, activeColor, card);
   if (card.color === 'wild') return true;
   return card.color === activeColor || card.value === activeValue;

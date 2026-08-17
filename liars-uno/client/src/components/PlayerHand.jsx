@@ -63,7 +63,7 @@ export default function PlayerHand({
         playable = true;
         chip = 'BLUFF';
       } else {
-        playable = isCardPlayable(card, game.activeColor, game.activeValue, game.drawStackCount);
+        playable = isCardPlayable(card, game.activeColor, game.activeValue, game.drawStackCount, false, game.openingMove);
         dim = !playable;
       }
     } else {
@@ -92,7 +92,7 @@ export default function PlayerHand({
   };
 
   const showDrawButton =
-    isMyTurn && canAct && !inWildFollowup && (turnState === 'PLAYER_TURN_START') && !game.hasDrawnThisTurn;
+    isMyTurn && canAct && !inWildFollowup && turnState === 'PLAYER_TURN_START';
 
   return (
     <div className="hand-dock">
@@ -186,14 +186,13 @@ export default function PlayerHand({
                     Pass (keep cards)
                   </button>
                 </>
+              ) : game.hasDrawnThisTurn ? (
+                <button className="btn-primary" onClick={onPass}>
+                  Pass
+                </button>
               ) : (
                 <button className="btn-primary" onClick={onDraw}>
                   {game.forcedWildDraw ? 'Draw 1 (forced)' : 'Draw card'}
-                </button>
-              )}
-              {game.hasDrawnThisTurn && !game.wildDrawnOption && (
-                <button className="btn-ghost" onClick={onPass}>
-                  Pass
                 </button>
               )}
             </>

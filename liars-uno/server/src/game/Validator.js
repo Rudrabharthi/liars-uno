@@ -18,9 +18,12 @@ export function isWildValue(value) {
 /**
  * §4.1 — server-authoritative match validation.
  * Face-down (bluff) cards are always playable — legality comes from the declared claim.
+ * When openingOnly is true (the opening move of a fresh game), the card must match
+ * the starting color — value-matching a different color is not allowed.
  */
-export function isCardPlayable(card, activeColor, activeValue, drawStackCount, isFaceDown = false) {
+export function isCardPlayable(card, activeColor, activeValue, drawStackCount, isFaceDown = false, openingOnly = false) {
   if (isFaceDown) return true;
+  if (openingOnly) return card.color === 'wild' || card.color === activeColor;
   if (drawStackCount > 0) return canStackCard(activeValue, activeColor, card);
   if (card.color === 'wild') return true; // Wild / Wild Draw 4 always playable
   return card.color === activeColor || card.value === activeValue;
