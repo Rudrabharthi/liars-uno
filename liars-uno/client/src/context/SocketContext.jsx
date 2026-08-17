@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useReducer, useRef }
 import { io } from 'socket.io-client';
 import sfx from '../utils/soundEffects.js';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+const SERVER_URL =
+  import.meta.env.VITE_SERVER_URL ||
+  (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
 
 const SocketContext = createContext(null);
 

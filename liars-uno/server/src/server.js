@@ -1,9 +1,14 @@
 import http from 'node:http';
-import { pathToFileURL } from 'node:url';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import { registerHandlers } from './socket/gameHandlers.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CLIENT_DIST = path.resolve(__dirname, '../../client/dist');
 
 export function startServer(port = process.env.PORT || 3001) {
   const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
@@ -15,6 +20,13 @@ export function startServer(port = process.env.PORT || 3001) {
   app.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'liars-uno-server', time: Date.now() });
   });
+
+  if (fs.existsSync(CLIENT_DIST)) {
+    app.use(express.static(CLIENT_DIST));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(CLIENT_DIST, 'index.html'));
+    });
+  }
 
   const server = http.createServer(app);
   const io = new Server(server, {
