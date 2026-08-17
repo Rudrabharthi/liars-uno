@@ -22,8 +22,15 @@ export function startServer(port = process.env.PORT || 3001) {
   });
 
   if (fs.existsSync(CLIENT_DIST)) {
+    app.use(
+      '/assets',
+      express.static(path.join(CLIENT_DIST, 'assets'), {
+        immutable: true,
+        maxAge: '1y',
+      })
+    );
     app.use(express.static(CLIENT_DIST));
-    app.get('*', (_req, res) => {
+    app.use((_req, res) => {
       res.sendFile(path.join(CLIENT_DIST, 'index.html'));
     });
   }
